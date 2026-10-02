@@ -2,9 +2,9 @@
 
 Backend REST API для блога психолога, разработанный на Django и Django REST Framework.
 
-Проект предоставляет API для публикации статей, категорий и комментариев, а также регистрацию и JWT-аутентификацию пользователей. Контентом можно управлять через Django Admin.
+Проект предоставляет API для публикации статей, категорий и комментариев, регистрацию и JWT-аутентификацию пользователей. Управление контентом осуществляется через Django Admin.
 
-Проект контейнеризирован с помощью Docker и использует PostgreSQL в качестве базы данных.
+Приложение контейнеризировано с помощью Docker, использует PostgreSQL в качестве базы данных и GitHub Actions для автоматического запуска тестов.
 
 ## Возможности
 
@@ -28,7 +28,8 @@ Backend REST API для блога психолога, разработанны�
 - Gunicorn;
 - WhiteNoise для раздачи статических файлов;
 - persistent Docker volumes для PostgreSQL и загруженных изображений;
-- автоматические API-тесты.
+- автоматические API-тесты;
+- CI через GitHub Actions.
 
 ## Стек
 
@@ -43,16 +44,20 @@ Backend REST API для блога психолога, разработанны�
 - WhiteNoise
 - Docker
 - Docker Compose
+- GitHub Actions
 
 ## Структура проекта
 
 ```text
 psychology_blog/
-├── accounts/           # Пользователи, регистрация и аутентификация
-├── blog/               # Посты, категории, изображения и комментарии
-├── config/             # Настройки Django и корневые URL
-├── compose.yaml        # Основная Docker Compose конфигурация
-├── compose.dev.yaml    # Конфигурация для разработки
+├── .github/
+│   └── workflows/
+│       └── tests.yml       # GitHub Actions CI
+├── accounts/               # Пользователи, регистрация и аутентификация
+├── blog/                   # Посты, категории, изображения и комментарии
+├── config/                 # Настройки Django и корневые URL
+├── compose.yaml            # Основная Docker Compose конфигурация
+├── compose.dev.yaml        # Конфигурация для разработки
 ├── Dockerfile
 ├── entrypoint.sh
 ├── manage.py
@@ -111,11 +116,15 @@ Authorization: Bearer <access_token>
 
 После запуска проекта доступны:
 
-```text
-Swagger UI:
-http://localhost:8000/api/docs/
+**Swagger UI**
 
-OpenAPI schema:
+```text
+http://localhost:8000/api/docs/
+```
+
+**OpenAPI schema**
+
+```text
 http://localhost:8000/api/schema/
 ```
 
@@ -138,11 +147,20 @@ DB_HOST=localhost
 DB_PORT=5433
 ```
 
-Файл `.env` не должен добавляться в Git.
+Файл `.env` содержит локальные настройки и секреты и не должен добавляться в Git.
 
 ## Запуск через Docker
 
 ### Основной запуск
+
+Склонируйте репозиторий:
+
+```bash
+git clone git@github.com:NikTihomirovv/psychology-blog.git
+cd psychology-blog
+```
+
+Создайте `.env` на основе `.env.example`.
 
 Соберите и запустите контейнеры:
 
@@ -150,7 +168,7 @@ DB_PORT=5433
 docker compose up -d --build
 ```
 
-Проверить состояние:
+Проверьте состояние:
 
 ```bash
 docker compose ps
@@ -204,7 +222,7 @@ DB_PORT=5433
 
 ## Media
 
-Загруженные пользователями изображения сохраняются отдельно от файловой системы backend-контейнера.
+Загруженные изображения сохраняются отдельно от файловой системы backend-контейнера.
 
 Для этого используется Docker volume:
 
@@ -221,7 +239,7 @@ media_data
 - получение опубликованных постов;
 - недоступность черновиков через публичный API;
 - фильтрацию по категориям;
-- автоматическую дату публикации;
+- автоматическую установку даты публикации;
 - получение категорий;
 - создание комментариев;
 - права доступа к комментариям;
@@ -237,7 +255,33 @@ media_data
 docker compose exec backend python manage.py test blog.tests accounts.tests
 ```
 
-## Администрирование
+В проекте реализовано 18 автоматических тестов основных API-сценариев.
+
+```text
+Ran 18 tests
+OK
+```
+
+## CI
+
+В проекте настроен GitHub Actions.
+
+При каждом `push` и `pull request` в ветку `main` автоматически:
+
+- запускается PostgreSQL;
+- устанавливается Python 3.12;
+- устанавливаются зависимости проекта;
+- запускаются автоматические Django API-тесты.
+
+Workflow расположен в:
+
+```text
+.github/workflows/tests.yml
+```
+
+Таким образом, изменения в основной ветке автоматически проверяются тестами в отдельном CI-окружении.
+
+## Django Admin
 
 Для управления постами, категориями, изображениями и комментариями используется Django Admin:
 
@@ -260,7 +304,9 @@ Client
 Django REST Framework
   │
   ├── Accounts API
-  │     └── JWT authentication
+  │     ├── Registration
+  │     ├── JWT
+  │     └── Current User
   │
   ├── Blog API
   │     ├── Posts
@@ -275,18 +321,9 @@ Django ORM
 PostgreSQL
 ```
 
-В production-like Docker-конфигурации HTTP-запросы обрабатываются Gunicorn.
+В основной Docker-конфигурации HTTP-запросы обрабатываются Gunicorn.
 
-Статические файлы Django обслуживаются через WhiteNoise.
-
-## Тестовое покрытие
-
-В проекте реализовано 18 автоматических тестов основных API-сценариев.
-
-```text
-Ran 18 tests
-OK
-```
+Статические файлы Django обслуживаются через WhiteNoise, а пользовательские изображения хранятся в отдельном Docker volume.
 
 ## Планы развития
 
@@ -294,5 +331,4 @@ OK
 - восстановление пароля;
 - расширение профиля пользователя;
 - дополнительные API-фильтры;
-- CI для автоматического запуска тестов;
 - production deployment.
